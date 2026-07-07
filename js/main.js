@@ -31,30 +31,7 @@
     setupCatalog();
     setupPropertyDetail();
     setupContactForm();
-    setupBankLogos();
     log("init OK");
-  }
-
-  /* ---------- Logos de bancos (texto -> logo monocromo) ----------
-     Cada .bank[data-logo] muestra su nombre en texto; si el archivo
-     de logo existe, lo cargamos y lo aplicamos como máscara de un
-     solo color. Si falta, se queda el texto (nada se rompe). */
-  function setupBankLogos() {
-    const banks = $$(".bank[data-logo]");
-    if (!banks.length) return;
-    banks.forEach((el) => {
-      const src = el.getAttribute("data-logo");
-      if (!src) return;
-      const img = new Image();
-      img.onload = () => {
-        // mask-image inline: la URL se resuelve relativa al HTML, no al CSS
-        el.style.webkitMaskImage = `url("${src}")`;
-        el.style.maskImage = `url("${src}")`;
-        el.classList.add("has-logo");
-      };
-      img.onerror = () => log("⚠ logo banco ausente: " + src);
-      img.src = src;
-    });
   }
 
   /* ---------- Header: transparente -> sólido ---------- */
@@ -212,10 +189,10 @@
     ? `<p class="prop-price">${money(p.price)} <span>MXN/mes</span></p>`
     : `<p class="prop-price">${money(p.price)} MXN</p>`;
 
-  // Acepta URL completa (https://...) o un ID de foto de Unsplash.
+  // Acepta URL completa (https://...), ruta local (assets/...) o un ID de foto de Unsplash.
   const photoURL = (ref, w) => {
     if (!ref) return "";
-    return /^https?:/.test(ref)
+    return /^https?:/.test(ref) || ref.includes("/")
       ? ref
       : `https://images.unsplash.com/photo-${ref}?auto=format&fit=crop&w=${w}&q=70`;
   };

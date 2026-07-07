@@ -292,23 +292,31 @@ ul { list-style: none; }
 .credits-title { font-family: var(--serif); font-weight: 500; font-size: clamp(1.6rem, 3vw, 2.3rem); line-height: 1.12; margin: 8px 0 14px; }
 .credits-text { color: rgba(255,255,255,.85); margin-bottom: 22px; }
 .credits-content { padding: clamp(28px, 4vw, 48px) clamp(20px, 4vw, 56px); display: flex; flex-direction: column; gap: 40px; justify-content: center; }
-.banks {
-  display: flex; flex-wrap: wrap; gap: clamp(24px, 4vw, 52px); align-items: center;
+/* ---- Bancos: marquee monocromo infinito ---- */
+.bank-marquee {
+  position: relative; overflow: hidden; width: 100%;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+          mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
-/* Fallback en texto (si el logo aún no está disponible) */
-.bank { font-weight: 700; letter-spacing: .02em; color: var(--gray); font-size: 1.1rem; transition: color var(--t), opacity var(--t), background-color var(--t); }
-.bank:hover { color: var(--graphite); }
-/* Logo monocromo (mismo color, épuré) — activado por JS cuando el archivo existe.
-   La mask-image se aplica inline desde JS (se resuelve relativa al HTML). */
-.bank.has-logo {
-  width: clamp(78px, 11vw, 108px); height: 30px;
-  color: transparent; text-indent: -9999px; overflow: hidden; white-space: nowrap;
-  background-color: var(--gray); opacity: .7;
+.bank-track { display: flex; width: max-content; animation: bank-scroll 34s linear infinite; }
+.bank-marquee:hover .bank-track { animation-play-state: paused; }
+@keyframes bank-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* Cada grupo es idéntico; el padding-right = separación, para un bucle sin costura */
+.bank-group {
+  display: flex; align-items: center;
+  gap: clamp(48px, 6vw, 90px); padding-right: clamp(48px, 6vw, 90px);
+}
+/* Logo: altura uniforme, ancho por aspect-ratio (fijado inline por logo) */
+.bl {
+  flex: none; height: 26px; aspect-ratio: 3;
+  background-color: var(--gray); opacity: .6;
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-position: center; mask-position: center;
   -webkit-mask-size: contain; mask-size: contain;
+  transition: background-color var(--t), opacity var(--t);
 }
-.bank.has-logo:hover { background-color: var(--graphite); opacity: 1; }
+.bl:hover { background-color: var(--graphite); opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .bank-track { animation: none; } }
 .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
 .step { text-align: center; }
 .step-ico { display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--line); color: var(--gold); margin-bottom: 12px; }
