@@ -10,11 +10,66 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
   <link rel="stylesheet" href="css/style.css" />
 
+  <!-- Decide ANTES del primer render si la intro cinematográfica debe sonar:
+       solo primera página de la sesión, solo aquí, nunca con reduced-motion. -->
+  <script>
+    (function () {
+      try {
+        var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reduce) return;
+        document.documentElement.classList.add("anim");
+        if (!sessionStorage.getItem("belegan-intro") && !sessionStorage.getItem("belegan-visited")) {
+          document.documentElement.classList.add("has-intro");
+          sessionStorage.setItem("belegan-intro", "1");
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <script src="js/data.js" defer></script>
   <script src="js/main.js" defer></script>
 </head>
 <body>
+
+  <!-- ============ INTRO CINEMATOGRÁFICA (una vez por sesión) ============ -->
+  <div class="intro" id="intro" aria-hidden="true">
+    <div class="intro-inner">
+      <svg class="intro-b" viewBox="0 0 439 569" aria-hidden="true">
+        <g transform="translate(0,569) scale(0.1,-0.1)">
+          <path class="intro-b-path" pathLength="1" d="M7 5683 c-13 -13 -8 -888 5 -901 9 -9 262 -12 1075 -12 885 0 1069
+-2 1091 -14 15 -7 43 -17 62 -21 40 -8 102 -34 177 -73 95 -49 243 -210 268
+-292 4 -14 13 -32 20 -40 56 -69 73 -399 27 -535 -75 -221 -198 -355 -447
+-485 -33 -17 -80 -44 -105 -60 -25 -16 -56 -34 -70 -40 -13 -6 -27 -15 -30
+-19 -3 -5 -38 -26 -78 -47 -41 -22 -101 -53 -134 -71 -34 -18 -66 -34 -72 -37
+-7 -3 -6 -8 3 -14 21 -15 1247 -9 1282 6 15 6 51 15 80 21 104 19 193 71 316
+186 117 109 200 227 262 375 13 30 32 73 42 96 11 23 19 52 19 66 0 13 8 49
+18 79 24 77 24 464 -1 555 -9 34 -17 74 -17 89 0 15 -7 41 -15 58 -8 18 -21
+52 -29 77 -28 87 -48 135 -62 151 -8 8 -14 20 -14 26 0 6 -13 34 -28 64 -169
+326 -472 607 -772 718 -173 63 -212 73 -355 91 -81 10 -2508 13 -2518 3z M6
+4144 c-10 -26 -6 -3206 4 -3249 25 -111 77 -284 90 -300 6 -7 24 -38 41 -70
+59 -112 195 -260 300 -329 95 -63 116 -76 154 -92 22 -9 52 -23 67 -31 79 -41
+336 -80 353 -53 14 23 6 2953 -9 3002 -20 67 -94 166 -263 348 -23 25 -65 74
+-95 110 -29 36 -78 90 -108 121 -30 31 -77 80 -104 110 -28 30 -109 117 -181
+194 -73 77 -152 163 -176 192 -50 59 -65 68 -73 47z M2338 2802 c-76 -1 -138
+-6 -138 -10 0 -5 15 -19 33 -32 30 -23 60 -40 212 -120 33 -18 67 -38 75 -44
+8 -7 29 -20 45 -28 39 -19 76 -40 95 -54 8 -7 40 -25 71 -41 71 -38 191 -127
+252 -189 72 -71 177 -238 177 -280 0 -8 10 -36 22 -62 34 -71 34 -366 0 -429
+-12 -23 -22 -49 -22 -57 0 -30 -95 -187 -146 -241 -98 -104 -224 -180 -362
+-221 l-82 -24 -648 0 c-356 0 -653 -4 -660 -8 -14 -10 -27 -918 -13 -941 9
+-14 1814 -16 1916 -2 83 12 207 40 220 51 5 4 46 20 90 35 323 110 687 470
+811 800 8 22 20 56 25 75 6 19 19 58 29 85 49 136 69 488 35 630 -8 33 -15 74
+-15 90 0 17 -9 47 -20 68 -11 20 -20 44 -20 53 0 15 -34 105 -50 134 -5 8
+-25 45 -44 83 -34 66 -60 103 -147 217 -76 99 -236 227 -354 285 -33 16 -67
+35 -75 41 -17 14 -81 38 -153 59 -26 7 -54 18 -60 24 -51 42 -539 66 -1099
+53z"/>
+        </g>
+      </svg>
+      <p class="intro-word">GRUPO BELEGAN</p>
+    </div>
+  </div>
 
   <!-- ============ HEADER ============ -->
   <header class="site-header" id="site-header" data-reveal-skip>
@@ -50,8 +105,8 @@
       <div class="container hero-inner">
         <div class="hero-copy">
           <h1 class="hero-title">
-            Tu patrimonio merece<br />
-            decisiones <em>inteligentes.</em>
+            <span class="line"><span class="line-inner">Tu patrimonio merece</span></span>
+            <span class="line"><span class="line-inner">decisiones <em>inteligentes.</em></span></span>
           </h1>
           <p class="hero-sub">
             Te acompañamos a comprar, rentar, financiar y administrar
@@ -67,7 +122,7 @@
           </div>
         </div>
 
-        <div class="hero-badge" data-reveal>
+        <div class="hero-badge">
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/><path d="M17 9h2v2"/></svg>
           <p>EXPERIENCIA<br />+ RESULTADOS<br />CONFIANZA</p>
         </div>
@@ -159,79 +214,8 @@
           </div>
         </div>
 
-        <div class="featured-track" id="featured-track">
-          <!-- Casa Aurea -->
-          <article class="prop-card" data-reveal>
-            <div class="prop-media" data-img="prop1">
-              <span class="prop-tag">Venta</span>
-            </div>
-            <div class="prop-body">
-              <p class="prop-loc">Zibatá, Querétaro</p>
-              <h3 class="prop-name">Casa Aurea</h3>
-              <ul class="prop-specs">
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12V7a2 2 0 012-2h14a2 2 0 012 2v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg> 4</li>
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h16v3a4 4 0 01-4 4H8a4 4 0 01-4-4v-3zM7 12V6a2 2 0 012-2 2 2 0 012 2"/></svg> 4.5</li>
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h4M3 15h4M9 3v4M15 3v4"/></svg> 280 m²</li>
-              </ul>
-              <p class="prop-price">$8,750,000 MXN</p>
-            </div>
-            <a class="stretched-link" href="propiedad.html?id=casa-aurea" aria-label="Ver Casa Aurea"></a>
-          </article>
-
-          <!-- Departamento Vértice -->
-          <article class="prop-card" data-reveal>
-            <div class="prop-media" data-img="prop2">
-              <span class="prop-tag prop-tag--rent">Renta</span>
-            </div>
-            <div class="prop-body">
-              <p class="prop-loc">Juriquilla, Querétaro</p>
-              <h3 class="prop-name">Departamento Vértice</h3>
-              <ul class="prop-specs">
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12V7a2 2 0 012-2h14a2 2 0 012 2v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg> 2</li>
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h16v3a4 4 0 01-4 4H8a4 4 0 01-4-4v-3zM7 12V6a2 2 0 012-2 2 2 0 012 2"/></svg> 2</li>
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h4M3 15h4M9 3v4M15 3v4"/></svg> 120 m²</li>
-              </ul>
-              <p class="prop-price">$24,500 <span>MXN/mes</span></p>
-            </div>
-            <a class="stretched-link" href="propiedad.html?id=departamento-vertice" aria-label="Ver Departamento Vértice"></a>
-          </article>
-
-          <!-- Casa Niebla -->
-          <article class="prop-card" data-reveal>
-            <div class="prop-media" data-img="prop3">
-              <span class="prop-tag">Venta</span>
-            </div>
-            <div class="prop-body">
-              <p class="prop-loc">El Marqués, Querétaro</p>
-              <h3 class="prop-name">Casa Niebla</h3>
-              <ul class="prop-specs">
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12V7a2 2 0 012-2h14a2 2 0 012 2v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg> 3</li>
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h16v3a4 4 0 01-4 4H8a4 4 0 01-4-4v-3zM7 12V6a2 2 0 012-2 2 2 0 012 2"/></svg> 3.5</li>
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h4M3 15h4M9 3v4M15 3v4"/></svg> 250 m²</li>
-              </ul>
-              <p class="prop-price">$6,450,000 MXN</p>
-            </div>
-            <a class="stretched-link" href="propiedad.html?id=casa-niebla" aria-label="Ver Casa Niebla"></a>
-          </article>
-
-          <!-- Oficina Corporativa -->
-          <article class="prop-card" data-reveal>
-            <div class="prop-media" data-img="prop4">
-              <span class="prop-tag prop-tag--rent">Renta</span>
-            </div>
-            <div class="prop-body">
-              <p class="prop-loc">Centro Sur, Querétaro</p>
-              <h3 class="prop-name">Oficina Corporativa</h3>
-              <ul class="prop-specs">
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12V7a2 2 0 012-2h14a2 2 0 012 2v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg> 1</li>
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h16v3a4 4 0 01-4 4H8a4 4 0 01-4-4v-3zM7 12V6a2 2 0 012-2 2 2 0 012 2"/></svg> 2</li>
-                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h4M3 15h4M9 3v4M15 3v4"/></svg> 85 m²</li>
-              </ul>
-              <p class="prop-price">$18,000 <span>MXN/mes</span></p>
-            </div>
-            <a class="stretched-link" href="propiedad.html?id=oficina-corporativa" aria-label="Ver Oficina Corporativa"></a>
-          </article>
-        </div>
+        <!-- Tarjetas generadas por JS desde js/data.js (setupFeatured) -->
+        <div class="featured-track" id="featured-track"></div>
       </div>
     </section>
 

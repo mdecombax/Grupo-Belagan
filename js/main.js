@@ -23,15 +23,80 @@
   document.addEventListener("DOMContentLoaded", init);
 
   function init() {
+    // La intro solo suena si el index es la primera página de la sesión
+    try { sessionStorage.setItem("belegan-visited", "1"); } catch (e) {}
+    // Listener vacío: habilita los estados :active al tacto (iOS sobre todo)
+    document.addEventListener("touchstart", () => {}, { passive: true });
     setupHeaderScroll();
     setupMobileNav();
+    setupIntro();
+    setupHeroParallax();
     setupReveals();
+    setupFeatured();
     setupCarousel();
     setupFavorites();
     setupCatalog();
     setupPropertyDetail();
     setupContactForm();
+    setupMagneticButtons(); // después: incluye botones generados por JS
+    setupViewTransitions();
     log("init OK");
+  }
+
+  /* ---------- Intro cinematográfica + coreografía del hero ---------- */
+  function setupIntro() {
+    const html = document.documentElement;
+    const heroReady = () =>
+      requestAnimationFrame(() => requestAnimationFrame(() => html.classList.add("hero-ready")));
+
+    if (!html.classList.contains("has-intro")) {
+      // Sin intro (sesión ya vista, reduced-motion o página interior):
+      // la coreografía del hero arranca de inmediato.
+      if (html.classList.contains("anim")) heroReady();
+      return;
+    }
+
+    const intro = $("#intro");
+    if (!intro) { heroReady(); return; }
+
+    let opened = false;
+    const open = () => {
+      if (opened) return;
+      opened = true;
+      html.classList.add("intro-open");
+      setTimeout(heroReady, 200); // el hero entra mientras el telón sube
+      const done = () => {
+        if (intro.isConnected) intro.remove();
+        html.classList.add("intro-done");
+      };
+      intro.addEventListener("transitionend", done, { once: true });
+      setTimeout(done, 1400); // red de seguridad si transitionend no llega
+      log("intro: telón abierto");
+    };
+
+    setTimeout(open, 2000);          // fin natural de la animación del logo
+    intro.addEventListener("click", open); // tocar = saltar la intro
+  }
+
+  /* ---------- Parallax sutil del hero (solo desktop) ---------- */
+  function setupHeroParallax() {
+    const bg = $(".hero-bg");
+    if (!bg) return; // No estamos en index.html
+    if (!document.documentElement.classList.contains("anim")) return;
+    if (window.matchMedia("(max-width: 760px)").matches) return;
+
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const y = window.scrollY;
+      if (y < window.innerHeight * 1.2) {
+        bg.style.transform = `translate3d(0, ${(y * 0.16).toFixed(1)}px, 0) scale(1.08)`;
+      }
+    };
+    window.addEventListener("scroll", () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }, { passive: true });
+    update();
   }
 
   /* ---------- Header: transparente -> sólido ---------- */
@@ -79,6 +144,8 @@
 
     // Escalonar elementos dentro del mismo grupo
     items.forEach((el) => {
+      // Los títulos se revelan con máscara (clip) en vez de simple fundido
+      if (el.matches(".section-title, .credits-title")) el.classList.add("reveal-mask");
       const parent = el.parentElement;
       if (!parent) return;
       const siblings = $$("[data-reveal]", parent);
@@ -141,6 +208,21 @@
     state.countersDone = true;
   }
 
+  /* ---------- Propiedades destacadas (index.html) ---------- */
+  function setupFeatured() {
+    const track = $("#featured-track");
+    if (!track) return; // No estamos en index.html
+    const DATA = getProperties();
+    if (!DATA.length) {
+      const section = track.closest("section");
+      if (section) section.hidden = true;
+      return log("⚠ destacadas: sin datos, sección oculta");
+    }
+    track.innerHTML = DATA.slice(0, 4).map(propCardHTML).join("");
+    revealCards(track);
+    log("destacadas:", Math.min(DATA.length, 4), "tarjetas");
+  }
+
   /* ---------- Carrusel propiedades ---------- */
   function setupCarousel() {
     const track = $("#featured-track");
@@ -185,16 +267,21 @@
   const getProperties = () => (Array.isArray(window.BELEGAN_PROPERTIES) ? window.BELEGAN_PROPERTIES : []);
 
   const money = (n) => "$" + Number(n || 0).toLocaleString("es-MX");
+  // El importe va en <b data-price> para poder animarlo al entrar en pantalla
   const priceHTML = (p) => p.op === "renta"
-    ? `<p class="prop-price">${money(p.price)} <span>MXN/mes</span></p>`
-    : `<p class="prop-price">${money(p.price)} MXN</p>`;
+    ? `<p class="prop-price"><b class="price-num" data-price="${p.price}">${money(p.price)}</b> <span>MXN/mes</span></p>`
+    : `<p class="prop-price"><b class="price-num" data-price="${p.price}">${money(p.price)}</b> MXN</p>`;
 
   // Acepta URL completa (https://...), ruta local (assets/...) o un ID de foto de Unsplash.
+  // Para rutas locales con w <= 800 se usa la variante ligera "-thumb.jpeg"
+  // (generada a 640px: tarjetas y miniaturas cargan ~10x menos peso).
   const photoURL = (ref, w) => {
     if (!ref) return "";
-    return /^https?:/.test(ref) || ref.includes("/")
-      ? ref
-      : `https://images.unsplash.com/photo-${ref}?auto=format&fit=crop&w=${w}&q=70`;
+    if (/^https?:/.test(ref)) return ref;
+    if (ref.includes("/")) {
+      return w && w <= 800 ? ref.replace(/\.(jpe?g|png|webp)$/i, "-thumb.jpeg") : ref;
+    }
+    return `https://images.unsplash.com/photo-${ref}?auto=format&fit=crop&w=${w}&q=70`;
   };
   const cover = (p, w) => photoURL((p.photos && p.photos[0]) || "", w);
 
@@ -224,7 +311,8 @@
       : '<span class="prop-tag">Venta</span>';
     return `
       <article class="prop-card">
-        <div class="prop-media" style="background-image:url('${cover(p, 800)}')">
+        <div class="prop-media">
+          <span class="prop-media-img" data-bg="${cover(p, 800)}"></span>
           ${tag}
           <button class="prop-fav" type="button" aria-label="Guardar propiedad">${ICON_HEART}</button>
         </div>
@@ -248,7 +336,65 @@
         c.classList.add("is-in");
       });
     });
+    observePrices(container);
+    lazyBackgrounds(container);
   };
+
+  /* ---------- Fondos perezosos: la imagen se carga al acercarse ---------- */
+  let bgObserver = null;
+  function lazyBackgrounds(ctx) {
+    const els = $$("[data-bg]", ctx || document);
+    if (!els.length) return;
+    const load = (el) => {
+      el.style.backgroundImage = `url('${el.dataset.bg}')`;
+      el.removeAttribute("data-bg");
+    };
+    if (!("IntersectionObserver" in window)) return els.forEach(load);
+    if (!bgObserver) {
+      bgObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          load(entry.target);
+          bgObserver.unobserve(entry.target);
+        });
+      }, { rootMargin: "400px 400px" }); // margen: cargadas antes de ser visibles
+    }
+    els.forEach((el) => bgObserver.observe(el));
+  }
+
+  /* ---------- Precios que cuentan al entrar en pantalla ---------- */
+  let priceObserver = null;
+  function observePrices(ctx) {
+    const nums = $$(".price-num[data-price]", ctx || document);
+    if (!nums.length) return;
+    // Sin animaciones (reduced-motion o sin IO): el precio ya está completo
+    if (!document.documentElement.classList.contains("anim")) return;
+    if (!("IntersectionObserver" in window)) return;
+
+    const run = (el) => {
+      const target = parseInt(el.dataset.price, 10) || 0;
+      const dur = 900;
+      const start = performance.now();
+      const step = (now) => {
+        const t = Math.min((now - start) / dur, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = money(Math.round(target * eased));
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+
+    if (!priceObserver) {
+      priceObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          run(entry.target);
+          priceObserver.unobserve(entry.target);
+        });
+      }, { threshold: 0.5 });
+    }
+    nums.forEach((n) => priceObserver.observe(n));
+  }
 
   /* ---------- Catálogo de propiedades ---------- */
   function setupCatalog() {
@@ -349,7 +495,7 @@
       ? `<div class="gal-thumbs">${photos.map((ph, i) =>
           `<button class="gal-thumb${i === 0 ? " is-active" : ""}" type="button"
              data-full="${photoURL(ph, 1600)}"
-             style="background-image:url('${photoURL(ph, 400)}')"
+             data-bg="${photoURL(ph, 400)}"
              aria-label="Foto ${i + 1}"></button>`).join("")}</div>`
       : "";
 
@@ -393,7 +539,10 @@
 
       <section class="detail-gallery">
         <div class="container">
-          <div class="gal-main" id="gal-main" style="background-image:url('${cover(p, 1600)}')">${tag}</div>
+          <div class="gal-main" id="gal-main">
+            <span class="gal-main-img" id="gal-main-img" style="background-image:url('${cover(p, 1600)}')"></span>
+            ${tag}
+          </div>
           ${thumbs}
         </div>
       </section>
@@ -425,16 +574,109 @@
       ${similarBlock}`;
 
     // Galería: cambiar imagen principal al hacer clic en una miniatura
-    const main = $("#gal-main", root);
+    const mainImg = $("#gal-main-img", root);
     $$(".gal-thumb", root).forEach((t) => {
       t.addEventListener("click", () => {
-        if (main) main.style.backgroundImage = `url('${t.dataset.full}')`;
+        if (mainImg) mainImg.style.backgroundImage = `url('${t.dataset.full}')`;
         $$(".gal-thumb", root).forEach((x) => x.classList.toggle("is-active", x === t));
       });
     });
 
     if (similar.length) revealCards($("#similar-grid", root));
+    observePrices($(".detail-aside", root));
+    lazyBackgrounds(root);
     log("detalle:", p.id);
+  }
+
+  /* =========================================================
+     TRANSICIONES DE PÁGINA (View Transitions cross-document)
+     La foto de la tarjeta se expande hasta ser el hero de la
+     ficha (y se repliega al volver). El nombre "prop-hero" se
+     asigna dinámicamente en pageswap/pagereveal; en la ficha
+     lo lleva #gal-main vía CSS. Navegadores sin soporte:
+     navegación normal.
+     ========================================================= */
+  function setupViewTransitions() {
+    if (!("onpageswap" in window)) return log("view transitions: sin soporte");
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    // ?id= de una URL de ficha (o null si no es propiedad.html)
+    const idFromURL = (url) => {
+      try {
+        const u = new URL(url, window.location.href);
+        return /propiedad\.html$/.test(u.pathname) ? u.searchParams.get("id") : null;
+      } catch { return null; }
+    };
+
+    // Foto de la tarjeta que enlaza a la propiedad `id` en la página actual
+    const mediaForId = (id) => {
+      if (!id) return null;
+      const link = $$(".prop-card .stretched-link").find((a) => idFromURL(a.href) === id);
+      return link ? $(".prop-media", link.closest(".prop-card")) : null;
+    };
+
+    const nameTemp = (el) => {
+      el.style.viewTransitionName = "prop-hero";
+      el.dataset.vtTemp = "1";
+    };
+    // Limpia nombres temporales; #gal-main recupera su nombre de CSS
+    const clearTemp = () => $$("[data-vt-temp]").forEach((el) => {
+      el.style.viewTransitionName = "";
+      delete el.dataset.vtTemp;
+    });
+
+    // Página saliente: nombrar la foto de la tarjeta hacia la que navegamos
+    window.addEventListener("pageswap", (e) => {
+      if (!e.viewTransition) return;
+      if (reduceMotion.matches) return e.viewTransition.skipTransition();
+      clearTemp();
+      const toId = idFromURL((e.activation && e.activation.entry && e.activation.entry.url) || "");
+      const media = mediaForId(toId);
+      if (media) {
+        // Ficha -> ficha similar: el hero cede el nombre a la tarjeta
+        const hero = $("#gal-main");
+        if (hero) { hero.style.viewTransitionName = "none"; hero.dataset.vtTemp = "1"; }
+        nameTemp(media);
+        log("pageswap: morph hacia", toId);
+      }
+    });
+
+    // Página entrante: nombrar la tarjeta de la propiedad de la que venimos
+    window.addEventListener("pagereveal", (e) => {
+      if (!e.viewTransition) return;
+      if (reduceMotion.matches) return e.viewTransition.skipTransition();
+      document.body.classList.add("vt-nav"); // p. ej. sin re-pop del botón WhatsApp
+      clearTemp();
+      const fromId = idFromURL((e.activation && e.activation.from && e.activation.from.url) || "");
+      if (fromId && !$("#detail-root")) {
+        const media = mediaForId(fromId);
+        if (media) { nameTemp(media); log("pagereveal: morph desde", fromId); }
+      }
+      e.viewTransition.finished.then(clearTemp).catch(() => {});
+    });
+  }
+
+  /* ---------- Botones magnéticos (solo puntero fino) ---------- */
+  function setupMagneticButtons() {
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+    if (!document.documentElement.classList.contains("anim")) return;
+    const STRENGTH = 7;
+    $$(".btn").forEach((btn) => {
+      // .is-magnet acorta la transición de transform durante el seguimiento;
+      // al salir se retira -> retorno suave con la transición normal (--t)
+      btn.addEventListener("mouseenter", () => btn.classList.add("is-magnet"));
+      btn.addEventListener("mousemove", (e) => {
+        const r = btn.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width - 0.5) * 2;
+        const y = ((e.clientY - r.top) / r.height - 0.5) * 2;
+        btn.style.transform = `translate(${(x * STRENGTH).toFixed(1)}px, ${(y * STRENGTH).toFixed(1)}px)`;
+      });
+      btn.addEventListener("mouseleave", () => {
+        btn.classList.remove("is-magnet");
+        btn.style.transform = "";
+      });
+    });
   }
 
   /* ---------- Formulario de contacto ---------- */

@@ -436,7 +436,7 @@ ul { list-style: none; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; scroll-behavior: auto; }
-  [data-reveal] { opacity: 1 !important; transform: none !important; }
+  [data-reveal] { opacity: 1 !important; transform: none !important; clip-path: none !important; }
 }
 
 /* =========================================================
@@ -582,12 +582,15 @@ ul { list-style: none; }
   display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 24px;
 }
 /* Entrada escalonada (independiente del IntersectionObserver global) */
-.catalog-grid .prop-card {
+.catalog-grid .prop-card,
+.featured-track .prop-card {
   opacity: 0; transform: translateY(20px);
   transition: opacity .6s var(--ease), transform .6s var(--ease), box-shadow var(--t);
 }
-.catalog-grid .prop-card.is-in { opacity: 1; transform: none; }
-.catalog-grid .prop-card:hover { transform: translateY(-6px); }
+.catalog-grid .prop-card.is-in,
+.featured-track .prop-card.is-in { opacity: 1; transform: none; }
+.catalog-grid .prop-card:hover,
+.featured-track .prop-card:hover { transform: translateY(-6px); }
 
 /* Afordancia "ver detalles" dentro de la tarjeta */
 .prop-more {
@@ -783,4 +786,217 @@ ul { list-style: none; }
 @media (max-width: 620px) {
   .credit-grid { grid-template-columns: 1fr; }
   .process-grid { grid-template-columns: 1fr; }
+}
+
+/* =========================================================
+   TRANSICIONES DE PÁGINA (View Transitions API cross-document)
+   Navegación con efecto app entre las 5 páginas. Navegadores
+   sin soporte navegan normal (degradación graciosa).
+   ========================================================= */
+@view-transition { navigation: auto; }
+
+/* Elementos persistentes: viajan aparte, sin fundido global */
+.site-header { view-transition-name: belegan-header; }
+.wa-float    { view-transition-name: belegan-wa; }
+
+/* Al navegar con transición, el flotante no vuelve a "hacer pop" */
+.vt-nav .wa-float { animation: none; }
+
+/* Hero de la ficha: contraparte del morph (la tarjeta recibe
+   el mismo nombre dinámicamente en JS -> setupViewTransitions) */
+.gal-main { view-transition-name: prop-hero; }
+
+/* Fundido raíz: salida rápida, entrada con leve ascenso */
+::view-transition-old(root) { animation: vt-leave .3s var(--ease) both; }
+::view-transition-new(root) { animation: vt-enter .5s var(--ease) both; }
+@keyframes vt-leave { to   { opacity: 0; } }
+@keyframes vt-enter { from { opacity: 0; transform: translateY(10px); } }
+
+/* El header y el flotante solo se cross-fadean en su sitio */
+::view-transition-group(belegan-header),
+::view-transition-group(belegan-wa) { animation-duration: .4s; }
+
+/* Morph foto tarjeta <-> hero: relleno tipo cover para que el
+   cambio de proporción no deforme la imagen (es la misma foto) */
+::view-transition-group(prop-hero) {
+  animation-duration: .55s;
+  animation-timing-function: var(--ease);
+  z-index: 5;
+}
+::view-transition-group(belegan-header) { z-index: 10; }
+::view-transition-image-pair(prop-hero) { isolation: none; }
+::view-transition-old(prop-hero),
+::view-transition-new(prop-hero) {
+  mix-blend-mode: normal;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  animation: none;
+}
+::view-transition-old(prop-hero) { animation: vt-leave .55s var(--ease) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-image-pair(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}
+
+/* =========================================================
+   INTRO CINEMATOGRÁFICA (index.html, una vez por sesión)
+   .anim      -> JS activo y sin reduced-motion (html)
+   .has-intro -> la intro debe sonar (primera página de la sesión)
+   .intro-open-> el telón se levanta
+   .hero-ready-> arranca la coreografía del hero
+   ========================================================= */
+.intro { display: none; }
+.has-intro .intro {
+  position: fixed; inset: 0; z-index: 300;
+  display: grid; place-items: center;
+  background: var(--green-dark);
+  transition: transform .8s cubic-bezier(.7, 0, .3, 1);
+}
+.has-intro.intro-open .intro { transform: translateY(-101%); }
+.has-intro:not(.intro-open) body { overflow: hidden; }
+
+.intro-inner { text-align: center; transition: opacity .5s var(--ease), transform .5s var(--ease); }
+.intro-open .intro-inner { opacity: 0; transform: translateY(-30px); }
+
+.intro-b { width: clamp(92px, 13vw, 148px); height: auto; display: block; margin-inline: auto; }
+.intro-b-path {
+  fill: var(--ivory); fill-opacity: 0;
+  stroke: var(--ivory); stroke-width: 80;
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation:
+    intro-draw 1.15s var(--ease) .15s forwards,
+    intro-fill .6s ease 1s forwards;
+}
+@keyframes intro-draw { to { stroke-dashoffset: 0; } }
+@keyframes intro-fill { to { fill-opacity: 1; } }
+
+.intro-word {
+  margin-top: 24px;
+  font-size: .78rem; font-weight: 600; color: rgba(246, 243, 238, .88);
+  letter-spacing: .85em; text-indent: .42em; white-space: nowrap;
+  opacity: 0;
+  animation: intro-word .9s var(--ease) 1.05s forwards;
+}
+@keyframes intro-word {
+  from { opacity: 0; letter-spacing: .85em; }
+  to   { opacity: 1; letter-spacing: .42em; }
+}
+
+/* ---------- Coreografía del hero ---------- */
+.hero-title .line { display: block; overflow: hidden; padding-bottom: .12em; margin-bottom: -.12em; }
+.hero-title .line-inner { display: block; }
+
+.anim .hero-title .line-inner { transform: translateY(115%); }
+.anim .hero-sub,
+.anim .hero-actions,
+.anim .hero-badge { opacity: 0; transform: translateY(26px); }
+.anim .hero-scroll { opacity: 0; }
+
+.anim.hero-ready .hero-title .line-inner {
+  transform: none;
+  transition: transform .9s var(--ease);
+}
+.anim.hero-ready .hero-title .line:nth-child(2) .line-inner { transition-delay: .14s; }
+.anim.hero-ready .hero-sub,
+.anim.hero-ready .hero-actions,
+.anim.hero-ready .hero-badge {
+  opacity: 1; transform: none;
+  transition: opacity .8s var(--ease), transform .8s var(--ease);
+}
+.anim.hero-ready .hero-sub     { transition-delay: .4s; }
+.anim.hero-ready .hero-actions { transition-delay: .55s; }
+.anim.hero-ready .hero-badge   { transition-delay: .7s; }
+.anim.hero-ready .hero-scroll  { opacity: 1; transition: opacity 1s var(--ease) .9s; }
+
+/* ---------- Parallax del hero (JS -> transform) ---------- */
+@media (min-width: 761px) {
+  .anim .hero-bg { transform: scale(1.08); will-change: transform; }
+}
+
+/* =========================================================
+   SOCLE DE FINITION (micro-interacciones)
+   ========================================================= */
+
+/* ---- Títulos revelados con máscara (clase puesta por JS) ---- */
+[data-reveal].reveal-mask {
+  opacity: 1;
+  clip-path: inset(0 0 100% 0);
+  transform: translateY(34px);
+  transition: clip-path .9s var(--ease), transform .9s var(--ease);
+}
+[data-reveal].reveal-mask.is-visible {
+  clip-path: inset(-15% -5% -25% -5%); /* margen para descendentes e itálicas */
+  transform: none;
+}
+
+/* ---- Entrada de los heros interiores (propiedades/créditos/contacto) ---- */
+.anim .page-hero-inner > * { opacity: 0; transform: translateY(26px); }
+.anim.hero-ready .page-hero-inner > * {
+  opacity: 1; transform: none;
+  transition: opacity .8s var(--ease), transform .8s var(--ease);
+}
+.anim.hero-ready .page-hero-inner > *:nth-child(2) { transition-delay: .12s; }
+.anim.hero-ready .page-hero-inner > *:nth-child(3) { transition-delay: .24s; }
+
+/* ---- Zoom afelpado de las fotos de tarjeta ---- */
+.prop-media { overflow: hidden; }
+.prop-media-img {
+  position: absolute; inset: 0;
+  background: var(--ivory-2) center/cover no-repeat;
+  transition: transform 1.1s var(--ease);
+}
+.prop-card:hover .prop-media-img { transform: scale(1.06); }
+
+/* ---- Ken Burns lento en la foto principal de la ficha ---- */
+.gal-main { overflow: hidden; }
+.gal-main-img {
+  position: absolute; inset: 0;
+  background: var(--ivory-2) center/cover no-repeat;
+  animation: kenburns 26s ease-in-out infinite alternate;
+}
+@keyframes kenburns { from { transform: scale(1); } to { transform: scale(1.08); } }
+
+/* ---- Botón magnético: seguimiento reactivo, retorno suave ---- */
+.btn.is-magnet {
+  transition: transform .16s ease-out, background var(--t), color var(--t), box-shadow var(--t);
+}
+
+/* ---- Respuesta táctil (dispositivos sin hover) ---- */
+@media (hover: none) {
+  .btn:active { transform: scale(.96); transition-duration: .12s; }
+  /* Selectores largos: deben ganar a ".catalog-grid .prop-card.is-in" */
+  .prop-card:active,
+  .catalog-grid .prop-card.is-in:active,
+  .featured-track .prop-card.is-in:active { transform: scale(.98); transition-duration: .12s; }
+  .need-card:active { transform: scale(.985); transition-duration: .12s; }
+  .method-card:active { transform: scale(.99); transition-duration: .12s; }
+}
+
+/* =========================================================
+   PASSE RESPONSIVE — cibles tactiles & header mobile
+   ========================================================= */
+/* Zone de clic élargie pour la nav desktop/tablette */
+.nav-link { padding: 10px 0; }
+
+/* Liens du footer et fil d'Ariane : hauteur tactile confortable */
+.footer-links a { display: inline-block; padding-block: 10px; }
+.detail-crumbs a { display: inline-block; padding-block: 10px; }
+
+@media (max-width: 760px) {
+  /* Header mobile plus compact (logo 76px -> 56px) */
+  .brand-logo { height: 56px; }
+  .nav-toggle { padding: 14px 10px; }
+
+  /* Le fil d'Ariane de la fiche respire sous le header */
+  .detail-crumbs { padding-top: 96px; }
+
+  /* Filtres du catalogue : hauteur tactile */
+  .seg-btn { padding-block: .8em; }
+  .filter select { min-height: 44px; }
+
+  /* Nav du menu mobile */
+  .main-nav .nav-link { padding: 12px 0; }
 }
