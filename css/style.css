@@ -1000,3 +1000,17 @@ ul { list-style: none; }
   /* Nav du menu mobile */
   .main-nav .nav-link { padding: 12px 0; }
 }
+
+/* ---- Propiedad sin fotos todavía ---- */
+.prop-media-img.is-empty,
+.gal-main-img.is-empty {
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--ivory-2), var(--ivory));
+  animation: none;
+}
+.prop-card:hover .prop-media-img.is-empty { transform: none; }
+.no-photo {
+  font-size: .78rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--gray);
+}
+.prop-price--ask { font-size: 1rem; color: var(--gray); }

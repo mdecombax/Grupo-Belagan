@@ -268,9 +268,16 @@
 
   const money = (n) => "$" + Number(n || 0).toLocaleString("es-MX");
   // El importe va en <b data-price> para poder animarlo al entrar en pantalla
-  const priceHTML = (p) => p.op === "renta"
-    ? `<p class="prop-price"><b class="price-num" data-price="${p.price}">${money(p.price)}</b> <span>MXN/mes</span></p>`
-    : `<p class="prop-price"><b class="price-num" data-price="${p.price}">${money(p.price)}</b> MXN</p>`;
+  // Sin precio -> "Precio a consultar"; priceFrom -> "Desde $X" (desarrollos con varias unidades)
+  const priceHTML = (p) => {
+    if (!p.price) return `<p class="prop-price prop-price--ask">Precio a consultar</p>`;
+    const from = p.priceFrom ? `<span>Desde</span> ` : "";
+    return p.op === "renta"
+      ? `<p class="prop-price">${from}<b class="price-num" data-price="${p.price}">${money(p.price)}</b> <span>MXN/mes</span></p>`
+      : `<p class="prop-price">${from}<b class="price-num" data-price="${p.price}">${money(p.price)}</b> MXN</p>`;
+  };
+  // Superficie: "120 m²" o rango "70.13–140.52 m²" (m2Max); vacío si no hay dato
+  const areaLabel = (p) => p.m2 ? `${p.m2}${p.m2Max ? "–" + p.m2Max : ""} m²` : "";
 
   // Acepta URL completa (https://...), ruta local (assets/...) o un ID de foto de Unsplash.
   // Para rutas locales con w <= 800 se usa la variante ligera "-thumb.jpeg"
@@ -284,6 +291,8 @@
     return `https://images.unsplash.com/photo-${ref}?auto=format&fit=crop&w=${w}&q=70`;
   };
   const cover = (p, w) => photoURL((p.photos && p.photos[0]) || "", w);
+  // Propiedad sin fotos todavía: marcador neutro en lugar de una imagen vacía
+  const NO_PHOTO = '<span class="no-photo">Fotos próximamente</span>';
 
   const ICON_BED  = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12V7a2 2 0 012-2h14a2 2 0 012 2v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg>';
   const ICON_BATH = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h16v3a4 4 0 01-4 4H8a4 4 0 01-4-4v-3zM7 12V6a2 2 0 012-2 2 2 0 012 2"/></svg>';
@@ -295,12 +304,12 @@
 
   const specsHTML = (p) => {
     if (p.tipo === "Terreno") {
-      return `<ul class="prop-specs prop-specs--land"><li>${ICON_AREA} ${p.m2} m²</li></ul>`;
+      return p.m2 ? `<ul class="prop-specs prop-specs--land"><li>${ICON_AREA} ${areaLabel(p)}</li></ul>` : "";
     }
     const items = [];
     if (p.beds)  items.push(`<li>${ICON_BED} ${p.beds}</li>`);
     if (p.baths) items.push(`<li>${ICON_BATH} ${p.baths}</li>`);
-    items.push(`<li>${ICON_AREA} ${p.m2} m²</li>`);
+    if (p.m2)    items.push(`<li>${ICON_AREA} ${areaLabel(p)}</li>`);
     return `<ul class="prop-specs">${items.join("")}</ul>`;
   };
 
@@ -312,7 +321,7 @@
     return `
       <article class="prop-card">
         <div class="prop-media">
-          <span class="prop-media-img" data-bg="${cover(p, 800)}"></span>
+          ${cover(p, 800) ? `<span class="prop-media-img" data-bg="${cover(p, 800)}"></span>` : `<span class="prop-media-img is-empty">${NO_PHOTO}</span>`}
           ${tag}
           <button class="prop-fav" type="button" aria-label="Guardar propiedad">${ICON_HEART}</button>
         </div>
@@ -436,8 +445,10 @@
         (filters.tipo === "all" || p.tipo === filters.tipo) &&
         (filters.zona === "all" || p.zona === filters.zona));
 
-      if (filters.orden === "price-asc")  list = list.slice().sort((a, b) => a.price - b.price);
-      if (filters.orden === "price-desc") list = list.slice().sort((a, b) => b.price - a.price);
+      // Las propiedades sin precio ("a consultar") van siempre al final
+      const byPrice = (dir) => (a, b) => (!a.price) - (!b.price) || dir * (a.price - b.price);
+      if (filters.orden === "price-asc")  list = list.slice().sort(byPrice(1));
+      if (filters.orden === "price-desc") list = list.slice().sort(byPrice(-1));
 
       grid.innerHTML = list.map(propCardHTML).join("");
 
@@ -502,10 +513,10 @@
     const spec = (ico, val, label) =>
       `<div class="dspec"><span class="dspec-ico">${ico}</span><b>${val}</b><span>${label}</span></div>`;
     const specs = [];
-    if (p.beds)    specs.push(spec(ICON_BED,  p.beds,  p.beds > 1 ? "Recámaras" : "Recámara"));
+    if (p.beds)    specs.push(spec(ICON_BED,  p.beds,  p.beds === 1 ? "Recámara" : "Recámaras"));
     if (p.baths)   specs.push(spec(ICON_BATH, p.baths, "Baños"));
     if (p.parking) specs.push(spec(ICON_CAR,  p.parking, p.parking > 1 ? "Estacionamientos" : "Estacionamiento"));
-    if (p.m2)      specs.push(spec(ICON_AREA, `${p.m2} m²`, "Superficie"));
+    if (p.m2)      specs.push(spec(ICON_AREA, areaLabel(p), "Superficie"));
 
     const features = (p.features || []).length
       ? `<h2 class="detail-h">Características</h2>
@@ -540,7 +551,9 @@
       <section class="detail-gallery">
         <div class="container">
           <div class="gal-main" id="gal-main">
-            <span class="gal-main-img" id="gal-main-img" style="background-image:url('${cover(p, 1600)}')"></span>
+            ${photos.length
+              ? `<span class="gal-main-img" id="gal-main-img" style="background-image:url('${cover(p, 1600)}')"></span>`
+              : `<span class="gal-main-img is-empty" id="gal-main-img">${NO_PHOTO}</span>`}
             ${tag}
           </div>
           ${thumbs}
