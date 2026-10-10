@@ -135,6 +135,10 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && state.navOpen) setOpen(false);
     });
+    // Tap fuera del panel -> cerrar
+    document.addEventListener("click", (e) => {
+      if (state.navOpen && !nav.contains(e.target) && !toggle.contains(e.target)) setOpen(false);
+    });
   }
 
   /* ---------- Reveal on scroll ---------- */

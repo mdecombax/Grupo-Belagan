@@ -102,6 +102,13 @@ ul { list-style: none; }
   transition: background var(--t), box-shadow var(--t), padding var(--t);
   padding-block: 22px;
 }
+/* Fondo + blur en un pseudo-elemento: un backdrop-filter sobre el header
+   lo convertiría en bloque contenedor del menú móvil (position: fixed),
+   que quedaría recortado a la altura del header. */
+.site-header::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: transparent; transition: background var(--t);
+}
 .header-inner { display: flex; align-items: center; gap: 24px; }
 .brand-logo { height: 76px; width: auto; transition: filter var(--t); }
 /* Logo en blanco mientras el header es transparente (sobre el hero oscuro) */
@@ -118,7 +125,8 @@ ul { list-style: none; }
 }
 .nav-link:hover::after, .nav-link.is-active::after { width: 100%; }
 
-.site-header.scrolled { background: rgba(246,243,238,.92); backdrop-filter: blur(12px); box-shadow: 0 1px 0 var(--line); padding-block: 12px; }
+.site-header.scrolled::before { background: rgba(246,243,238,.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.site-header.scrolled { box-shadow: 0 1px 0 var(--line); padding-block: 12px; }
 .site-header.scrolled .nav-link { color: var(--graphite); }
 .site-header.scrolled .nav-link.is-active { color: var(--green); }
 
@@ -463,6 +471,16 @@ ul { list-style: none; }
   .main-nav.open { transform: translateX(0); }
   .main-nav .nav-link { color: var(--graphite); font-size: 1.1rem; }
   body.nav-open { overflow: hidden; }
+  /* Velo bajo el header: capta el tap fuera del panel (cierra sin abrir lo de abajo) */
+  body.nav-open::after {
+    content: ""; position: fixed; inset: 0; z-index: 99; background: rgba(0,0,0,.35);
+  }
+  /* El botón queda encima del panel y se convierte en X para cerrar */
+  .nav-toggle { position: relative; z-index: 2; }
+  .nav-toggle[aria-expanded="true"] span { background: var(--graphite); }
+  .nav-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+  .nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
   .hero { min-height: 92svh; }
   .hero-copy { text-align: left; }
@@ -635,8 +653,10 @@ ul { list-style: none; }
    FICHA DE PROPIEDAD (propiedad.html)
    Páginas sin hero oscuro -> header sólido desde el inicio
    ========================================================= */
+.page-solid .site-header::before {
+  background: rgba(246,243,238,.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
 .page-solid .site-header {
-  background: rgba(246,243,238,.92); backdrop-filter: blur(12px);
   box-shadow: 0 1px 0 var(--line); padding-block: 12px;
 }
 .page-solid .site-header .brand-logo { filter: none; }
